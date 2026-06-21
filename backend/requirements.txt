@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+pyvista
+numpy
+websockets
