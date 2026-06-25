@@ -25,3 +25,6 @@ build/
 out/
 .env
 .env*.local
+
+# Workspace files
+.agents/
