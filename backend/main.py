@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from api.websocket import router as websocket_router
 
 app = FastAPI(title="LinAlgMadeEasy Backend")
+
+app.include_router(websocket_router)
 
 app.add_middleware(
     CORSMiddleware,
