@@ -1,3 +1,4 @@
+from pyvista import Line
 import pyvista as pv
 import numpy as np
 from typing import Dict, Any
@@ -30,3 +31,12 @@ def generate_mesh(shape_type: str = 'cube') -> Dict[str, Any]:
         "vertices": vertices.flatten().tolist(),
         "indices": indices.flatten().tolist()
     }
+
+def generate_axes():
+    # X: Red
+    # Y: Green                  
+    # Z: Blue
+    line_x = Line([0, 0, 0], [1, 0, 0])
+    line_y = Line([0, 0, 0], [0, 1, 0])
+    line_z = Line([0, 0, 0], [0, 0, 1])
+    return [line_x, line_y, line_z]
