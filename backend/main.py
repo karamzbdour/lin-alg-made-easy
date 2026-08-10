@@ -1,3 +1,7 @@
+# To run the backend server
+# open the venv in the backend directory ( $ ..\.venv\Scripts\Activate.ps1 )
+# $ uvicorn main:app --reload
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.websocket import router as websocket_router
