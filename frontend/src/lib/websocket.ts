@@ -34,4 +34,11 @@ export class WSClient {
       this.ws.send(JSON.stringify(matrix));
     }
   }
+
+  disconnect() {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+  }
 }

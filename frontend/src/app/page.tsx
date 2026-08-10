@@ -1,18 +1,20 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import {useEffect, useState, useRef, useCallback } from 'react';
 import Scene from '../canvas/Scene';
 import Controls from '../components/Controls';
+import ToolArsenal from '../components/ToolArsenal';
 import { WSClient } from '../lib/websocket';
 
 export default function Home() {
   const [vertices, setVertices] = useState<Float32Array | null>(null);
   const [indices, setIndices] = useState<Uint16Array | null>(null);
+  const [activeTool, setActiveTool] = useState<string>('vector');
   const wsClientRef = useRef<WSClient | null>(null);
 
   useEffect(() => {
     // 1. Initialize WebSocket Connection to the Python Backend
-    const client = new WSClient("ws://localhost:8000/ws/sphere");
+    const client = new WSClient(`ws://localhost:8000/ws/${activeTool}`);
     
     // 2. Handshake Phase: Catch the initial JSON containing the mesh topology
     client.onInit = (verts, inds) => {
@@ -28,13 +30,13 @@ export default function Home() {
     client.connect();
     wsClientRef.current = client;
 
-    // Cleanup on unmount
+    // Cleanup on unmount or when activeTool changes
     return () => {
       if (wsClientRef.current) {
-        // Handle WS cleanup here if implemented
+        wsClientRef.current.disconnect();
       }
     };
-  }, []);
+  }, [activeTool]);
 
   const handleMatrixChange = useCallback((matrix: number[][]) => {
     if (wsClientRef.current) {
@@ -47,6 +49,9 @@ export default function Home() {
       
       {/* The UI panel overlay */}
       <Controls onMatrixChange={handleMatrixChange} />
+
+      {/* Tool Arsenal */}
+      <ToolArsenal activeTool={activeTool} onSelectTool={setActiveTool} />
 
       {/* The 3D WebGL Canvas */}
       <Scene vertices={vertices} indices={indices} />

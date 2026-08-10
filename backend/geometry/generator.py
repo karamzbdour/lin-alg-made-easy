@@ -2,7 +2,7 @@ from pyvista import Line
 import pyvista as pv
 import numpy as np
 from typing import Dict, Any
-
+    
 def generate_mesh(shape_type: str = 'cube') -> Dict[str, Any]:
     """
     Generates a parameterized 3D surface mesh and serialises its geometry 
@@ -11,7 +11,9 @@ def generate_mesh(shape_type: str = 'cube') -> Dict[str, Any]:
     if shape_type == 'sphere': 
         mesh = pv.Sphere(radius=1.0, theta_resolution=30, phi_resolution=30)
     elif shape_type == 'cube':
-        mesh = pv.Box(bounds=(0,1,0,1,0,1))
+        mesh = pv.Box(level=10)
+    elif shape_type == 'vector':
+        mesh = pv.Arrow(start=(0, 0, 0), direction=(1, 1, 1), tip_length=0.1, tip_radius=0.05, shaft_radius=0.03)
     else:
         raise ValueError(f"Unsupported shape type: {shape_type}")
 

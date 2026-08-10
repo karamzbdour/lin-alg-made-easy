@@ -20,6 +20,8 @@ export interface AxesProps {
     y?: string;
     z?: string;
   };
+  /** Scale factor to determine what values ticks represent. Default is 1. */
+  scaleFactor?: number;
 }
 
 const DEFAULT_COLORS = {
@@ -35,6 +37,7 @@ export default function Axes({
   tickSize = 0.12,
   tickStep = 1,
   colors = DEFAULT_COLORS,
+  scaleFactor = 1,
 }: AxesProps) {
   const colorX = colors?.x ?? DEFAULT_COLORS.x;
   const colorY = colors?.y ?? DEFAULT_COLORS.y;
@@ -102,7 +105,7 @@ export default function Axes({
               anchorX="center"
               anchorY="top"
             >
-              {t.toString()}
+              {Number((t * scaleFactor).toFixed(4)).toString()}
             </Text>
           </React.Fragment>
         ))}
@@ -159,7 +162,7 @@ export default function Axes({
               anchorX="right"
               anchorY="middle"
             >
-              {t.toString()}
+              {Number((t * scaleFactor).toFixed(4)).toString()}
             </Text>
           </React.Fragment>
         ))}
@@ -216,7 +219,7 @@ export default function Axes({
               anchorX="right"
               anchorY="middle"
             >
-              {t.toString()}
+              {Number((t * scaleFactor).toFixed(4)).toString()}
             </Text>
           </React.Fragment>
         ))}

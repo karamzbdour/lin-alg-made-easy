@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // Throttle utility to limit how often we send data over the network (e.g. 60 FPS)
 function useThrottle<T>(value: T, limit: number): T {
