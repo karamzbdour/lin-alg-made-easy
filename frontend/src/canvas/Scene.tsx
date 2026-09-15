@@ -14,46 +14,44 @@ interface SceneProps {
 
 const DynamicMesh: React.FC<SceneProps> = ({ vertices, indices }) => {
   const meshRef = useRef<THREE.Mesh>(null);
-  const geometryRef = useRef<THREE.BufferGeometry>(null);
 
-  // This hook runs every time 'vertices' or 'indices' change
+  // 1. Full Geometry Re-allocation on Topology Change (e.g. Vector -> Sphere -> Cube)
   useEffect(() => {
-    if (!geometryRef.current || !vertices || !indices) return;
+    if (!vertices || !indices) return;
 
-    // 1. Tell Three.js where the points are in space
-    // We create a BufferAttribute out of our Float32Array. 
-    // The '3' tells WebGL: "Group these floats into chunks of 3 (x, y, z)"
-    geometryRef.current.setAttribute(
-      'position',
-      new THREE.BufferAttribute(vertices, 3)
-    );
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+    geometry.computeVertexNormals();
 
-    // 2. Tell Three.js how to connect the points into triangles
-    // We create a BufferAttribute out of our Uint16Array.
-    // The '1' tells WebGL: "Read these integers one by one"
-    geometryRef.current.setIndex(
-      new THREE.BufferAttribute(indices, 1)
-    );
-
-    // 3. Recalculate lighting normals
-    // Since the shape might have stretched or rotated, we need WebGL to 
-    // recalculate how light bounces off the new surfaces.
-    geometryRef.current.computeVertexNormals();
-
-    // 4. Important: Tell the GPU that the data has been updated and needs to be re-drawn!
-    geometryRef.current.attributes.position.needsUpdate = true;
-    if (geometryRef.current.index) {
-        geometryRef.current.index.needsUpdate = true;
+    if (meshRef.current) {
+      const oldGeometry = meshRef.current.geometry;
+      meshRef.current.geometry = geometry;
+      if (oldGeometry) oldGeometry.dispose();
     }
 
-  }, [vertices, indices]);
+    return () => {
+      geometry.dispose();
+    };
+  }, [indices]);
+
+  // 2. High-speed In-Place Vertex Updates on Matrix Transformations
+  useEffect(() => {
+    if (!meshRef.current || !vertices) return;
+    const geometry = meshRef.current.geometry;
+    if (!geometry) return;
+
+    const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute;
+    if (posAttr && posAttr.count === vertices.length / 3) {
+      posAttr.set(vertices);
+      posAttr.needsUpdate = true;
+      geometry.computeVertexNormals();
+    }
+  }, [vertices]);
 
   return (
     <mesh ref={meshRef}>
-      {/* We explicitly define an empty BufferGeometry that we populate via the ref */}
-      <bufferGeometry ref={geometryRef} />
-      
-      {/* A nice semi-transparent wireframe material so we can see the math in action */}
+      {/* Semi-transparent wireframe material to visualize linear transformations */}
       <meshStandardMaterial 
         color="#00ffcc" 
         wireframe={true} 
