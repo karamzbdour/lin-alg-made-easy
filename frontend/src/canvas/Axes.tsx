@@ -1,18 +1,20 @@
 'use client';
 
-import React from 'react';
-import { Line, Text } from '@react-three/drei';
+import React, { useRef, useState } from 'react';
+import { useThree, useFrame } from '@react-three/fiber';
+import { Line, Text, Billboard } from '@react-three/drei';
+import * as THREE from 'three';
 
 export interface AxesProps {
-  /** Length of each axis line from origin. Default is 5. */
+  /** Explicit length of each axis line from origin. If omitted, dynamically calculated. */
   length?: number;
   /** Width of the axis lines in pixels. Default is 2. */
   lineWidth?: number;
   /** Whether to display numerical tick marks along the axes. Default is true. */
   showTicks?: boolean;
-  /** Size of tick mark line segments. Default is 0.12. */
+  /** Fixed size of tick mark line segments. If omitted, dynamically scaled. */
   tickSize?: number;
-  /** Step interval between consecutive tick marks. Default is 1. */
+  /** Step interval between consecutive tick marks. If omitted, computed adaptively. */
   tickStep?: number;
   /** Custom colors for the X, Y, and Z axes. */
   colors?: {
@@ -20,8 +22,6 @@ export interface AxesProps {
     y?: string;
     z?: string;
   };
-  /** Scale factor to determine what values ticks represent. Default is 1. */
-  scaleFactor?: number;
 }
 
 const DEFAULT_COLORS = {
@@ -30,26 +30,110 @@ const DEFAULT_COLORS = {
   z: '#3b82f6', // Bright Blue
 };
 
+/**
+ * Calculates standard "nice" tick intervals (1, 2, 5 * 10^k)
+ * based on the visible span of the camera frustum.
+ */
+function getAdaptiveTickStep(visibleSpan: number, targetTicks = 8): number {
+  if (visibleSpan <= 0) return 1;
+  const roughStep = visibleSpan / targetTicks;
+  const power = Math.pow(10, Math.floor(Math.log10(roughStep)));
+  const normalized = roughStep / power;
+
+  let factor = 1;
+  if (normalized > 7.5) {
+    factor = 10;
+  } else if (normalized > 3.5) {
+    factor = 5;
+  } else if (normalized > 1.5) {
+    factor = 2;
+  } else {
+    factor = 1;
+  }
+
+  const step = factor * power;
+  return Number(step.toPrecision(10));
+}
+
+/**
+ * Formats tick coordinate values cleanly, using scientific notation
+ * only for very large or microscopic values.
+ */
+function formatTickLabel(val: number): string {
+  const abs = Math.abs(val);
+  if (abs >= 1e6 || (abs < 1e-3 && abs !== 0)) {
+    return val.toExponential(2);
+  }
+  return Number(val.toPrecision(6)).toString();
+}
+
 export default function Axes({
-  length = 5,
+  length: propLength,
   lineWidth = 2,
   showTicks = true,
-  tickSize = 0.12,
-  tickStep = 1,
+  tickSize: propTickSize,
+  tickStep: propTickStep,
   colors = DEFAULT_COLORS,
-  scaleFactor = 1,
 }: AxesProps) {
+  const { camera } = useThree();
+  const lastDistanceRef = useRef<number>(0);
+
+  const [axisMetrics, setAxisMetrics] = useState(() => ({
+    axisLength: propLength ?? 10,
+    computedTickStep: propTickStep ?? 1,
+    computedTickSize: propTickSize ?? 0.15,
+    fontSize: 0.25,
+    ticks: [] as number[],
+  }));
+
+  useFrame(() => {
+    const distance = camera.position.length();
+
+    // Recompute when camera distance changes by more than 0.5% or initially
+    if (
+      lastDistanceRef.current === 0 ||
+      Math.abs(distance - lastDistanceRef.current) / (lastDistanceRef.current || 1) > 0.005
+    ) {
+      lastDistanceRef.current = distance;
+
+      // Estimate visible span along the plane passing through the origin
+      const fov = (camera as THREE.PerspectiveCamera).fov ?? 45;
+      const fovRad = (fov * Math.PI) / 180;
+      const visibleSpan = 2 * distance * Math.tan(fovRad / 2);
+
+      const computedStep = propTickStep ?? getAdaptiveTickStep(visibleSpan, 8);
+      const computedLength = propLength ?? Math.max(computedStep * 5, visibleSpan * 0.55);
+      const computedTickSize = propTickSize ?? distance * 0.012;
+      const fontSize = distance * 0.022;
+
+      // Generate ticks at true 3D world coordinates
+      const ticks: number[] = [];
+      const maxTick = Math.floor(computedLength / computedStep) * computedStep;
+      const count = Math.round(maxTick / computedStep);
+
+      for (let i = -count; i <= count; i++) {
+        if (i !== 0) {
+          const val = Number((i * computedStep).toPrecision(8));
+          ticks.push(val);
+        }
+      }
+
+      setAxisMetrics({
+        axisLength: computedLength,
+        computedTickStep: computedStep,
+        computedTickSize,
+        fontSize,
+        ticks,
+      });
+    }
+  });
+
   const colorX = colors?.x ?? DEFAULT_COLORS.x;
   const colorY = colors?.y ?? DEFAULT_COLORS.y;
   const colorZ = colors?.z ?? DEFAULT_COLORS.z;
 
-  // Generate integer tick values along positive and negative directions (excluding origin)
-  const ticks: number[] = [];
-  for (let i = -Math.floor(length); i <= Math.floor(length); i += tickStep) {
-    if (i !== 0) {
-      ticks.push(i);
-    }
-  }
+  const { axisLength, computedTickSize, fontSize, ticks } = axisMetrics;
+  const originRadius = lastDistanceRef.current > 0 ? lastDistanceRef.current * 0.004 : 0.05;
 
   return (
     <group name="custom-axes">
@@ -58,7 +142,7 @@ export default function Axes({
       <Line
         points={[
           [0, 0, 0],
-          [length, 0, 0],
+          [axisLength, 0, 0],
         ]}
         color={colorX}
         lineWidth={lineWidth}
@@ -66,25 +150,26 @@ export default function Axes({
       {/* Negative X axis line (dashed) */}
       <Line
         points={[
-          [-length, 0, 0],
+          [-axisLength, 0, 0],
           [0, 0, 0],
         ]}
         color={colorX}
         lineWidth={lineWidth * 0.75}
         dashed
-        dashSize={0.2}
-        gapSize={0.1}
+        dashSize={axisLength * 0.04}
+        gapSize={axisLength * 0.02}
       />
       {/* X Axis Label */}
-      <Text
-        position={[length + 0.4, 0, 0]}
-        fontSize={0.35}
-        color={colorX}
-        anchorX="center"
-        anchorY="middle"
-      >
-        X
-      </Text>
+      <Billboard position={[axisLength + fontSize * 1.5, 0, 0]}>
+        <Text
+          fontSize={fontSize * 1.3}
+          color={colorX}
+          anchorX="center"
+          anchorY="middle"
+        >
+          X
+        </Text>
+      </Billboard>
 
       {/* X-axis Ticks & Labels */}
       {showTicks &&
@@ -92,21 +177,22 @@ export default function Axes({
           <React.Fragment key={`x-tick-${t}`}>
             <Line
               points={[
-                [t, -tickSize, 0],
-                [t, tickSize, 0],
+                [t, -computedTickSize, 0],
+                [t, computedTickSize, 0],
               ]}
               color={colorX}
               lineWidth={lineWidth * 0.7}
             />
-            <Text
-              position={[t, -tickSize - 0.2, 0]}
-              fontSize={0.2}
-              color={colorX}
-              anchorX="center"
-              anchorY="top"
-            >
-              {Number((t * scaleFactor).toFixed(4)).toString()}
-            </Text>
+            <Billboard position={[t, -computedTickSize - fontSize * 0.7, 0]}>
+              <Text
+                fontSize={fontSize}
+                color={colorX}
+                anchorX="center"
+                anchorY="top"
+              >
+                {formatTickLabel(t)}
+              </Text>
+            </Billboard>
           </React.Fragment>
         ))}
 
@@ -115,7 +201,7 @@ export default function Axes({
       <Line
         points={[
           [0, 0, 0],
-          [0, length, 0],
+          [0, axisLength, 0],
         ]}
         color={colorY}
         lineWidth={lineWidth}
@@ -123,25 +209,26 @@ export default function Axes({
       {/* Negative Y axis line (dashed) */}
       <Line
         points={[
-          [0, -length, 0],
+          [0, -axisLength, 0],
           [0, 0, 0],
         ]}
         color={colorY}
         lineWidth={lineWidth * 0.75}
         dashed
-        dashSize={0.2}
-        gapSize={0.1}
+        dashSize={axisLength * 0.04}
+        gapSize={axisLength * 0.02}
       />
       {/* Y Axis Label */}
-      <Text
-        position={[0, length + 0.4, 0]}
-        fontSize={0.35}
-        color={colorY}
-        anchorX="center"
-        anchorY="middle"
-      >
-        Y
-      </Text>
+      <Billboard position={[0, axisLength + fontSize * 1.5, 0]}>
+        <Text
+          fontSize={fontSize * 1.3}
+          color={colorY}
+          anchorX="center"
+          anchorY="middle"
+        >
+          Y
+        </Text>
+      </Billboard>
 
       {/* Y-axis Ticks & Labels */}
       {showTicks &&
@@ -149,21 +236,22 @@ export default function Axes({
           <React.Fragment key={`y-tick-${t}`}>
             <Line
               points={[
-                [-tickSize, t, 0],
-                [tickSize, t, 0],
+                [-computedTickSize, t, 0],
+                [computedTickSize, t, 0],
               ]}
               color={colorY}
               lineWidth={lineWidth * 0.7}
             />
-            <Text
-              position={[-tickSize - 0.15, t, 0]}
-              fontSize={0.2}
-              color={colorY}
-              anchorX="right"
-              anchorY="middle"
-            >
-              {Number((t * scaleFactor).toFixed(4)).toString()}
-            </Text>
+            <Billboard position={[-computedTickSize - fontSize * 0.5, t, 0]}>
+              <Text
+                fontSize={fontSize}
+                color={colorY}
+                anchorX="right"
+                anchorY="middle"
+              >
+                {formatTickLabel(t)}
+              </Text>
+            </Billboard>
           </React.Fragment>
         ))}
 
@@ -172,7 +260,7 @@ export default function Axes({
       <Line
         points={[
           [0, 0, 0],
-          [0, 0, length],
+          [0, 0, axisLength],
         ]}
         color={colorZ}
         lineWidth={lineWidth}
@@ -180,25 +268,26 @@ export default function Axes({
       {/* Negative Z axis line (dashed) */}
       <Line
         points={[
-          [0, 0, -length],
+          [0, 0, -axisLength],
           [0, 0, 0],
         ]}
         color={colorZ}
         lineWidth={lineWidth * 0.75}
         dashed
-        dashSize={0.2}
-        gapSize={0.1}
+        dashSize={axisLength * 0.04}
+        gapSize={axisLength * 0.02}
       />
       {/* Z Axis Label */}
-      <Text
-        position={[0, 0, length + 0.4]}
-        fontSize={0.35}
-        color={colorZ}
-        anchorX="center"
-        anchorY="middle"
-      >
-        Z
-      </Text>
+      <Billboard position={[0, 0, axisLength + fontSize * 1.5]}>
+        <Text
+          fontSize={fontSize * 1.3}
+          color={colorZ}
+          anchorX="center"
+          anchorY="middle"
+        >
+          Z
+        </Text>
+      </Billboard>
 
       {/* Z-axis Ticks & Labels */}
       {showTicks &&
@@ -206,27 +295,28 @@ export default function Axes({
           <React.Fragment key={`z-tick-${t}`}>
             <Line
               points={[
-                [-tickSize, 0, t],
-                [tickSize, 0, t],
+                [-computedTickSize, 0, t],
+                [computedTickSize, 0, t],
               ]}
               color={colorZ}
               lineWidth={lineWidth * 0.7}
             />
-            <Text
-              position={[-tickSize - 0.15, 0, t]}
-              fontSize={0.2}
-              color={colorZ}
-              anchorX="right"
-              anchorY="middle"
-            >
-              {Number((t * scaleFactor).toFixed(4)).toString()}
-            </Text>
+            <Billboard position={[-computedTickSize - fontSize * 0.5, 0, t]}>
+              <Text
+                fontSize={fontSize}
+                color={colorZ}
+                anchorX="right"
+                anchorY="middle"
+              >
+                {formatTickLabel(t)}
+              </Text>
+            </Billboard>
           </React.Fragment>
         ))}
 
       {/* Origin marker */}
       <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[0.05, 16, 16]} />
+        <sphereGeometry args={[originRadius, 16, 16]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
     </group>
