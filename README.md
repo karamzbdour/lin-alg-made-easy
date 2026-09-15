@@ -9,10 +9,7 @@ The application combines a **FastAPI (Python)** backend for matrix mathematics w
 ## Demo
 
 <div align="center">
-  <a href="https://www.loom.com/share/f5783a834527453483225c382c04b219">
-    <img src="https://cdn.loom.com/sessions/thumbnails/f5783a834527453483225c382c04b219-with-play.gif" alt="LinAlgMadeEasy Demo Video" width="100%" style="max-width: 800px; border-radius: 8px;">
-  </a>
-  <p><em>Click the preview above to watch the interactive demonstration on Loom</em></p>
+   <video src="https://github.com/user-attachments/assets/8f55a540-0f01-45d5-9537-1ad833fc5678" controls="controls" width="100%" style="max-width: 800px; border-radius: 8px;"></video>
 </div>
 
 ---
