@@ -9,7 +9,7 @@ The application combines a **FastAPI (Python)** backend for matrix mathematics w
 ## Demo
 
 <div align="center">
-   <video src="https://github.com/user-attachments/assets/8f55a540-0f01-45d5-9537-1ad833fc5678" controls="controls" width="100%" style="max-width: 800px; border-radius: 8px;"></video>
+   <video src="https://github.com/user-attachments/assets/3b5b0a11-a161-43d0-bcd0-32757afe3889" controls="controls" width="100%" style="max-width: 800px; border-radius: 8px;"></video>
 </div>
 
 ---
