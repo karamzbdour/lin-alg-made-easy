@@ -45,12 +45,12 @@ export default function Controls({ onMatrixChange }: ControlsProps) {
   };
 
   return (
-    <div className="absolute top-8 left-8 p-6 bg-zinc-900/80 text-white rounded-2xl shadow-2xl backdrop-blur-md border border-zinc-700 w-96 z-10">
-      <h3 className="text-2xl font-bold mb-6 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+    <div className="absolute top-6 left-6 p-4 bg-zinc-900/80 text-white rounded-xl shadow-xl backdrop-blur-md border border-zinc-700/70 w-72 z-10">
+      <h3 className="text-base font-semibold mb-3 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
         Linear Transformation
       </h3>
       
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2.5">
         {matrix.map((row, r) =>
           row.map((val, c) => (
             <div key={`${r}-${c}`} className="flex flex-col items-center">
@@ -59,7 +59,7 @@ export default function Controls({ onMatrixChange }: ControlsProps) {
                 step="0.1"
                 value={val}
                 onChange={(e) => handleChange(r, c, parseFloat(e.target.value) || 0)}
-                className="w-full bg-zinc-800 text-white border border-zinc-600 rounded-md p-2 text-center font-mono text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                className="w-full bg-zinc-800 text-white border border-zinc-600 rounded px-1.5 py-1 text-center font-mono text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
               />
               <input
                 type="range"
@@ -68,7 +68,7 @@ export default function Controls({ onMatrixChange }: ControlsProps) {
                 step="0.1"
                 value={val}
                 onChange={(e) => handleChange(r, c, parseFloat(e.target.value))}
-                className="w-full mt-3 accent-emerald-500 cursor-pointer"
+                className="w-full mt-1.5 accent-emerald-500 cursor-pointer h-1.5"
               />
             </div>
           ))
@@ -77,7 +77,7 @@ export default function Controls({ onMatrixChange }: ControlsProps) {
 
       <button 
         onClick={() => setMatrix([[1,0,0],[0,1,0],[0,0,1]])}
-        className="mt-8 w-full py-3 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-xl text-sm font-semibold tracking-wide transition-colors border border-zinc-700"
+        className="mt-3.5 w-full py-1.5 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg text-xs font-medium tracking-wide transition-colors border border-zinc-700"
       >
         Reset Identity Matrix
       </button>

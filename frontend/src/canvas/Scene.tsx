@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -63,33 +63,17 @@ const DynamicMesh: React.FC<SceneProps> = ({ vertices, indices }) => {
 };
 
 export default function Scene({ vertices, indices }: SceneProps) {
-  const [zoomLevel, setZoomLevel] = useState(1);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    setZoomLevel((prev) => {
-      const zoomFactor = 1.1;
-      if (e.deltaY > 0) return prev * zoomFactor;
-      if (e.deltaY < 0) return prev / zoomFactor;
-      return prev;
-    });
-  }, []);
-
   return (
-    <div 
-      style={{ width: '100vw', height: '100vh', background: '#111' }}
-      onWheel={handleWheel}
-    >
+    <div style={{ width: '100vw', height: '100vh', background: '#111' }}>
       <Canvas camera={{ position: [0, 0, 15], fov: 45 }}>
-        <Axes length={5} scaleFactor={zoomLevel} />
+        <Axes />
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={1} />
         
-        <group scale={[1 / zoomLevel, 1 / zoomLevel, 1 / zoomLevel]}>
-          <DynamicMesh vertices={vertices} indices={indices} />
-        </group>
+        <DynamicMesh vertices={vertices} indices={indices} />
         
-        {/* Allows the user to rotate and zoom the camera with their mouse */}
-        <OrbitControls enableZoom={false} />
+        {/* Allows the user to rotate, pan, and zoom the camera with their mouse */}
+        <OrbitControls enableZoom={true} minDistance={1} maxDistance={500} makeDefault />
       </Canvas>
     </div>
   );
